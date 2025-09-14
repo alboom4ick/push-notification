@@ -1,0 +1,59 @@
+{
+    "message": "Push Notification Generator API",
+    "version": "1.0",
+    "description": "API to generate push notification messages for bank clients based on their details and card recommendations",
+    "endpoints": {
+        "POST /generate-push-notification": {
+            "description": "Generate a push notification message using client and card information",
+            "parameters": {
+                "name": "Client's name (required)",
+                "status": "Client's status (required)",
+                "age": "Client's age (required, must be greater than 0)",
+                "current_product": "Current card of the client (required)",
+                "notification_product": "Card recommendation (required, one of the supported types)"
+            }
+        },
+        "GET /": {
+            "description": "Retrieve API documentation",
+            "parameters": {}
+        }
+    },
+    "cors": {
+        "status": "enabled",
+        "allowed_origins": "origin",
+        "allowed_methods": ["GET", "POST", "OPTIONS"]
+    },
+    "example_post": {
+        "url": "POST /generate-push-notification",
+        "body": {
+            "current_time": "2025-09-14T10:00:00Z",
+
+            "user_info": {
+                "name": "Камшат",
+                "status": "Студент",
+                "age": 22,
+                "city" : "Almaty"
+            },
+
+            "current_product": "Премиальная карта",
+            "notification_product": "Карта для путешествий",
+
+            "extra_fields": {
+                "last_active_month": "2024-05",
+                "top3_categories": ["Путешествия", "Рестораны", "Развлечения"],
+                "most_frequent_currency": "KZT"
+            },
+
+            "kz_calendar": [],
+            "event_calendar": [],
+
+            "humor_level": 75,
+            "tone_of_voice": [],
+            "examples_of_push_notifications": []
+        }
+    },
+    "example_get": {
+        "url": "/"
+    },
+    "notes": "The API uses a prompt template to generate push notifications based on the input parameters. Additional tags may be added depending on the card type."
+}
