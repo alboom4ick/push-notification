@@ -1,0 +1,146 @@
+version: "3.9"
+
+services:
+#  nginx:
+#    image: nginx:alpine
+#    container_name: nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#    depends_on:
+#      - app
+#      - operate
+#    networks: [ app-platform ]
+#  app:
+#    container_name: sdu-bpm-app
+#    image: sdu-bpm-app:latest
+#    ports:
+#      - "8888:8888"         # server.port = ${PORT:8888}
+#    environment:
+#      - PORT=8888
+#      # внутри сети ходим по именам сервисов, не по localhost:
+#      - ZEEBE_BASE_URL=http://zeebe:8080
+#      - ZEEBE_GATEWAY_URL=http://zeebe:26500
+#      - OPERATE_BASE_URL=http://operate:8080
+#      # чуть ограничим JVM, чтобы не душила железо
+#      - JAVA_TOOL_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Xms256m -Xmx512m
+#    depends_on:
+#      - zeebe
+#      - operate
+#      - elasticsearch
+#    networks:
+#      - app-platform
+#    # Если в образе есть curl/wget — можно включить хелсчек (иначе убери блок healthcheck)
+#    healthcheck:
+#      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/api/actuator/health | grep -q '\"status\":\"UP\"'"]
+#      interval: 20s
+#      timeout: 5s
+#      retries: 10
+#      start_period: 40s
+
+  zeebe: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#zeebe
+    image: camunda/zeebe:${CAMUNDA_PLATFORM_VERSION}
+    container_name: zeebe
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+      - "8088:8080"
+    environment:
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/9600' || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - zeebe:/usr/local/zeebe/data
+    networks:
+      - app-platform
+    depends_on:
+      - elasticsearch
+
+  operate: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#operate
+    image: camunda/operate:${CAMUNDA_PLATFORM_VERSION}
+    container_name: operate
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_OPERATE_AUTH_ENABLED=false
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - management.endpoints.web.exposure.include=health
+      - management.endpoint.health.probes.enabled=true
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -O - -q 'http://localhost:8080/actuator/health/readiness'" ]
+    networks:
+      - app-platform
+    depends_on:
+      - zeebe
+      - elasticsearch
+
+  mongo:
+    image: mongo:5.0
+    container_name: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user_qit
+      MONGO_INITDB_ROOT_PASSWORD: 123
+    ports:
+      - "27017:27017"
+    networks:
+      - app-platform
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.runCommand('ping').ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch: # https://hub.docker.com/_/elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION}
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=docker-cluster
+      # адреса нод (именно имена сервисов в сети docker):
+      - discovery.seed_hosts=elasticsearch,elasticsearch2
+      # мастера по именам нод:
+      - cluster.initial_master_nodes=elasticsearch,elasticsearch2
+      # без логина/пароля (dev-режим):
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cat/health | grep -q green" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - elastic:/usr/share/elasticsearch/data
+    networks:
+      - app-platform
+
+volumes:
+  zeebe:
+  elastic:
+  kibana:
+  mongodb_data:
+
+networks:
+  app-platform:
+    driver: bridge

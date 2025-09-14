@@ -1,0 +1,18 @@
+{
+  "properties": [
+    {
+      "name": "application.feign-api.extra_values_api",
+      "type": "java.lang.String",
+      "description": "Description for application.feign-api.extra_values_api."
+    },
+    {
+      "name": "application.feign-api.calculate_benf_api",
+      "type": "java.lang.String",
+      "description": "Description for application.feign-api.calculate_benf_api."
+    },
+    {
+      "name": "application.feign-api.generate_push_api",
+      "type": "java.lang.String",
+      "description": "Description for application.feign-api.generate_push_api."
+    }
+  ] }
