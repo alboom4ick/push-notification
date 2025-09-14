@@ -1,0 +1,23 @@
+.custom-slider .p-slider-range {
+    background: #29b56e !important;
+}
+
+/* "ползунок" */
+.custom-slider .p-slider-handle {
+    border: 2px solid #29b56e !important;
+    background: #29b56e !important;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+}
+
+.custom-checkbox.p-checkbox .p-checkbox-box.p-highlight {
+    background: #29b56e !important;
+    border-color: #29b56e !important;
+}
+
+/* hover */
+.custom-checkbox.p-checkbox .p-checkbox-box.p-highlight:hover {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+}
